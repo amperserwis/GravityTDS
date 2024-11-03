@@ -20,6 +20,11 @@
 #define EEPROM_write(address, p) {int i = 0; byte *pp = (byte*)&(p);for(; i < sizeof(p); i++) EEPROM.write(address+i, pp[i]);}
 #define EEPROM_read(address, p)  {int i = 0; byte *pp = (byte*)&(p);for(; i < sizeof(p); i++) pp[i]=EEPROM.read(address+i);}
 
+
+#ifdef ESP32
+#define EEPROM_SIZE 16
+#endif
+
 GravityTDS::GravityTDS()
 {
     this->pin = A1;
@@ -96,11 +101,18 @@ float GravityTDS::getEcValue()
 
 void GravityTDS::readKValues()
 {
+#ifdef ESP32
+    EEPROM.begin(EEPROM_SIZE);
+#endif
     EEPROM_read(this->kValueAddress, this->kValue);  
     if(EEPROM.read(this->kValueAddress)==0xFF && EEPROM.read(this->kValueAddress+1)==0xFF && EEPROM.read(this->kValueAddress+2)==0xFF && EEPROM.read(this->kValueAddress+3)==0xFF)
     {
       this->kValue = 1.0;   // default value: K = 1.0
       EEPROM_write(this->kValueAddress, this->kValue);
+#ifdef ESP32
+      EEPROM.commit();
+      EEPROM.end();
+#endif
     }
 }
 
@@ -199,7 +211,14 @@ void GravityTDS::ecCalibration(byte mode)
             Serial.println();
             if(ecCalibrationFinish)
             {
+#ifdef ESP32
+               EEPROM.begin(EEPROM_SIZE);
+#endif
                EEPROM_write(kValueAddress, kValue);
+#ifdef ESP32
+               EEPROM.commit();
+               EEPROM.end();
+#endif
                Serial.print(F(">>>Calibration Successful,K Value Saved"));
             }
             else Serial.print(F(">>>Calibration Failed"));       
